@@ -1,14 +1,16 @@
 # =============================================================================
-# 名称: Sync GitHub Release to Gitee
+# 名称: Sync GitHub Release to Gitee（已停用自动触发，仅保留手动）
 # 触发:
-#   1. release published —— 正常发版时自动触发
-#   2. workflow_dispatch —— 手动触发，输入已有 Release 的 tag 即可同步
+#   workflow_dispatch —— 仅在需要时手动触发，输入已有 Release 的 tag 即可同步
+#
+# 说明：本项目不再使用 Gitee 镜像，故已移除 release published 自动触发，
+#       发版时不会再自动同步到 Gitee。如需恢复自动同步，把下面这段加回来即可：
+#         release:
+#           types: [published]
 # =============================================================================
 name: Sync Release to Gitee
 
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       tag:
@@ -126,7 +128,7 @@ jobs:
             -d "name=${NAME}" \
             -d "body=${FULL_BODY}" \
             -d "prerelease=${PRERELEASE}" \
-            -d "target_commitish=master")
+            -d "target_commitish=main")
           
           RELEASE_ID=$(echo "$RESPONSE" | jq -r '.id // empty')
           
