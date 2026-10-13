@@ -223,7 +223,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      GH_REPO: ${{ github.repository }}
     steps:
+      # gh 需要 git 仓库上下文（否则报 "not a git repository"），故先 checkout。
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
