@@ -16,6 +16,7 @@
 */
 
 #include <JuceHeader.h>
+#include "Localisation/Localisation.h"
 #include "PluginHostServer.h"
 #include "LookAndFeel/MixerLookAndFeel.h"
 
@@ -148,8 +149,12 @@ public:
     const juce::String getApplicationVersion() override { return ProjectInfo::versionString; }
     bool moreThanOneInstanceAllowed() override { return true; }
 
-    void initialise (const juce::String&) override
+    void initialise (const juce::String& commandLine) override
     {
+        // 本地化：PluginHost 为无设置界面的子进程，仅支持命令行 --lang= 覆盖。
+        if (const auto language = minixer::Localisation::parseCommandLineLanguage (commandLine))
+            minixer::Localisation::apply (*language);
+
         auto mode       = getCommandLineParameter ("mode");
         auto pluginPath = getCommandLineParameter ("plugin-path");
         auto ipcKey     = getCommandLineParameter ("ipc-key");

@@ -15,6 +15,18 @@ Minixer 常驻于系统后台，可将硬件麦克风输入经 VST3 插件链（
 - **插件扫描与黑名单**：后台扫描 VST3 插件目录，崩溃/超时插件自动加入黑名单并跳过。
 - **系统常驻**：最小化至系统托盘，支持开机自启、全局快捷键、配置持久化。
 
+## 界面语言
+
+Minixer 内置简体中文界面，启动时按以下优先级选择语言：
+
+1. 命令行参数：`--lang=zh` / `--lang=en` / `--lang=system`
+2. 设置面板 → 首选项 →「语言」（跟随系统 / 中文 / English，切换后重启生效）
+3. 操作系统显示语言（中文系统自动使用中文）
+
+界面文案全部通过 JUCE `TRANS()` 宏管理，译文集中于 `translations/Minixer_zh_CN.txt`。
+修改译文后需运行 `python tools/gen_translation_data.py` 重新生成内嵌翻译数据；
+`python tools/verify_translations.py` 可校验覆盖率（新增界面文案若漏翻译，CI 会失败）。
+
 ## 技术栈
 
 - JUCE 8
@@ -163,6 +175,18 @@ Minixer runs in the background, taking hardware microphone input through a VST3 
 - **Preset system**: save and load the entire plugin chain state together with channel strip parameters.
 - **Plugin scanning and blacklist**: scan VST3 plugin directories in the background; plugins that crash or time out are automatically added to a blacklist and skipped.
 - **System resident**: minimize to the Windows system tray, with startup launch, global shortcuts, and persistent configuration.
+
+## Interface Language
+
+Minixer ships with a built-in Simplified Chinese interface. The language is selected at startup with the following priority:
+
+1. Command-line argument: `--lang=zh` / `--lang=en` / `--lang=system`
+2. Settings panel → Preferences → "Language" (System default / Chinese / English; takes effect after a restart)
+3. The operating system's display language (Chinese systems automatically use Chinese)
+
+All UI strings are managed through JUCE's `TRANS()` macro, with translations kept in `translations/Minixer_zh_CN.txt`.
+After editing the translations, run `python tools/gen_translation_data.py` to regenerate the embedded data;
+`python tools/verify_translations.py` checks coverage (CI fails if a newly added UI string is left untranslated).
 
 ## Tech Stack
 

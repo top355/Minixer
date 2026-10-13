@@ -1139,7 +1139,7 @@ void MainComponent::pluginSlotLoadCancelRequested (int slotIndex)
     // 仅作废在途加载；替换场景下原有插件保持不变并继续工作
     cancelSlotLoadsForSlot (slotIndex);
 
-    statusLabel.setText (TRANS ("Cancelled loading in slot ") + juce::String (slotIndex + 1),
+    statusLabel.setText (juce::String::formatted (TRANS ("Cancelled loading in slot %d"), slotIndex + 1),
                          juce::dontSendNotification);
 }
 

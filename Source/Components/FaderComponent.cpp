@@ -149,7 +149,7 @@ void FaderComponent::pasteValueFromClipboard()
 juce::String FaderComponent::valueToDbString (double valueDb)
 {
     if (valueDb <= -59.9)
-        return "-inf dB";
+        return TRANS ("-inf dB");
 
     return juce::String (valueDb, 1) + " dB";
 }

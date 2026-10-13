@@ -1,0 +1,209 @@
+# =============================================================================
+# 名称: Build Windows
+# 触发:
+#   1. push / pull_request —— 提交或 PR 时自动编译验证
+#   2. workflow_dispatch    —— 手动触发，可指定 JUCE 版本 tag
+#
+# 产物（Artifacts）:
+#   - Minixer-windows-x64     : Minixer.exe + PluginHost64.exe（64 位主程序）
+#   - PluginHost-windows-x86  : PluginHost32.exe（32 位插件桥接子进程）
+#
+# 说明：JUCE（默认 8.0.10，已捆绑 VST3 SDK）与 Steinberg ASIO SDK 均在
+#       构建时自动拉取，仓库内无需内置大文件。
+#       CMake 单次配置只能构建单一架构，故 64 位与 32 位分为两个 job。
+# =============================================================================
+name: Build Windows
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      juce_tag:
+        description: 'JUCE 版本 tag（默认 8.0.10）'
+        required: false
+        default: '8.0.10'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 翻译表完整性检查：确保新增/修改的 TRANS() 字符串都有中文译文。
+  # 纯 Python，不依赖 JUCE，执行最快，先行失败可避免无意义的全量编译。
+  # ---------------------------------------------------------------------------
+  check-translations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify translation coverage
+        run: python3 tools/verify_translations.py
+
+  # ---------------------------------------------------------------------------
+  # x64：主程序 Minixer.exe + PluginHost64.exe
+  # ---------------------------------------------------------------------------
+  build-x64:
+    needs: check-translations
+    runs-on: windows-latest
+    env:
+      JUCE_TAG: ${{ github.event.inputs.juce_tag || '8.0.10' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # ---------------------------------------------------------------------
+      # 拉取 JUCE（--depth 1 浅克隆；VST3 SDK 已随 JUCE 捆绑于
+      # modules/juce_audio_processors/format_types/VST3_SDK）
+      # ---------------------------------------------------------------------
+      - name: Fetch JUCE
+        shell: pwsh
+        run: |
+          $dest = "${{ runner.workspace }}/JUCE"
+          git clone --depth 1 --branch "$env:JUCE_TAG" https://github.com/juce-framework/JUCE.git $dest
+          if ($LASTEXITCODE -ne 0) { throw "JUCE clone failed (tag: $env:JUCE_TAG)" }
+          "JUCE_DIR=$dest" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "JUCE_DIR=$dest"
+
+      # ---------------------------------------------------------------------
+      # 拉取 Steinberg ASIO SDK（多个备用地址，取第一个可用的）
+      # ---------------------------------------------------------------------
+      - name: Fetch ASIO SDK
+        shell: pwsh
+        run: |
+          $urls = @(
+            "https://download.steinberg.net/sdk_downloads/ASIO-SDK_2.3.4_2025-10-15.zip",
+            "https://www.steinberg.net/fileadmin/user_upload/ASIO-SDK_2.3.3_2019-06-14.zip"
+          )
+          $zip = "${{ runner.temp }}/asio-sdk.zip"
+          $ok = $false
+          foreach ($u in $urls) {
+            try {
+              Write-Host "Downloading $u"
+              Invoke-WebRequest -Uri $u -OutFile $zip -ErrorAction Stop
+              $ok = $true
+              break
+            } catch {
+              Write-Warning "Download failed: $u ($($_.Exception.Message))"
+            }
+          }
+          if (-not $ok) { throw "ASIO SDK download failed" }
+
+          $dest = "${{ runner.temp }}/asiosdk"
+          if (Test-Path $dest) { Remove-Item -Recurse -Force $dest }
+          Expand-Archive -Path $zip -DestinationPath $dest -Force
+
+          # 解压后根目录名随版本变化，定位包含 common/iasiodrv.h 的目录
+          $header = Get-ChildItem -Path $dest -Recurse -Filter "iasiodrv.h" | Select-Object -First 1
+          if (-not $header) { throw "iasiodrv.h not found in ASIO SDK archive" }
+          $asioDir = $header.Directory.Parent.FullName
+          Write-Host "ASIO_DIR=$asioDir"
+          "ASIO_DIR=$asioDir" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Configure (x64)
+        shell: pwsh
+        run: cmake -B build-x64 -S . -A x64 -DJUCE_DIR="$env:JUCE_DIR" -DASIO_DIR="$env:ASIO_DIR"
+
+      - name: Build (Release)
+        shell: pwsh
+        run: cmake --build build-x64 --config Release --parallel
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $stage = "${{ runner.workspace }}/stage-x64"
+          New-Item -ItemType Directory -Path $stage -Force | Out-Null
+
+          # PluginHost64.exe 已被 POST_BUILD 复制到 Minixer 输出目录旁
+          $exe = Get-ChildItem -Path build-x64 -Recurse -Filter "Minixer.exe" | Select-Object -First 1
+          if (-not $exe) { throw "Minixer.exe not found" }
+          Copy-Item $exe.FullName $stage
+
+          $host64 = Get-ChildItem -Path build-x64 -Recurse -Filter "PluginHost64.exe" | Select-Object -First 1
+          if ($host64) { Copy-Item $host64.FullName $stage } else { Write-Warning "PluginHost64.exe not found" }
+
+          Get-ChildItem $stage | Format-Table Name, Length
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Minixer-windows-x64
+          path: ${{ runner.workspace }}/stage-x64/*
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Win32：仅构建 PluginHost32.exe（32 位插件桥接子进程）。
+  # CMakeLists 在 32 位配置下会自动跳过 Minixer 主程序，只产出 PluginHost32。
+  # ---------------------------------------------------------------------------
+  build-plugins-x86:
+    needs: check-translations
+    runs-on: windows-latest
+    env:
+      JUCE_TAG: ${{ github.event.inputs.juce_tag || '8.0.10' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch JUCE
+        shell: pwsh
+        run: |
+          $dest = "${{ runner.workspace }}/JUCE"
+          git clone --depth 1 --branch "$env:JUCE_TAG" https://github.com/juce-framework/JUCE.git $dest
+          if ($LASTEXITCODE -ne 0) { throw "JUCE clone failed (tag: $env:JUCE_TAG)" }
+          "JUCE_DIR=$dest" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Fetch ASIO SDK
+        shell: pwsh
+        run: |
+          $urls = @(
+            "https://download.steinberg.net/sdk_downloads/ASIO-SDK_2.3.4_2025-10-15.zip",
+            "https://www.steinberg.net/fileadmin/user_upload/ASIO-SDK_2.3.3_2019-06-14.zip"
+          )
+          $zip = "${{ runner.temp }}/asio-sdk.zip"
+          $ok = $false
+          foreach ($u in $urls) {
+            try {
+              Write-Host "Downloading $u"
+              Invoke-WebRequest -Uri $u -OutFile $zip -ErrorAction Stop
+              $ok = $true
+              break
+            } catch {
+              Write-Warning "Download failed: $u ($($_.Exception.Message))"
+            }
+          }
+          if (-not $ok) { throw "ASIO SDK download failed" }
+
+          $dest = "${{ runner.temp }}/asiosdk"
+          if (Test-Path $dest) { Remove-Item -Recurse -Force $dest }
+          Expand-Archive -Path $zip -DestinationPath $dest -Force
+
+          $header = Get-ChildItem -Path $dest -Recurse -Filter "iasiodrv.h" | Select-Object -First 1
+          if (-not $header) { throw "iasiodrv.h not found in ASIO SDK archive" }
+          $asioDir = $header.Directory.Parent.FullName
+          "ASIO_DIR=$asioDir" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Configure (Win32)
+        shell: pwsh
+        run: cmake -B build-x86 -S . -A Win32 -DJUCE_DIR="$env:JUCE_DIR" -DASIO_DIR="$env:ASIO_DIR"
+
+      - name: Build (Release)
+        shell: pwsh
+        run: cmake --build build-x86 --config Release --parallel
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $stage = "${{ runner.workspace }}/stage-x86"
+          New-Item -ItemType Directory -Path $stage -Force | Out-Null
+
+          # CMakeLists 的 POST_BUILD 会把 PluginHost32.exe 复制到源码树
+          # build/Minixer_artefacts/Release（供 x64 主程序调用）
+          $host32 = Get-ChildItem -Path . -Recurse -Filter "PluginHost32.exe" | Select-Object -First 1
+          if (-not $host32) { throw "PluginHost32.exe not found" }
+          Copy-Item $host32.FullName $stage
+
+          Get-ChildItem $stage | Format-Table Name, Length
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PluginHost-windows-x86
+          path: ${{ runner.workspace }}/stage-x86/*
+          if-no-files-found: error

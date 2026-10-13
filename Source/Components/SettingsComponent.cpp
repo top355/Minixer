@@ -50,6 +50,12 @@ SettingsComponent::SettingsComponent (juce::AudioDeviceManager& manager)
     setupToggleButton (autoLoadPresetToggle,    TRANS ("Auto-load preset on startup"));
     setupLabel (autoLoadPresetLabel, TRANS ("Preset to load"));
 
+    setupLabel (languageLabel, TRANS ("Language"));
+    setupComboBox (languageComboBox);
+    languageComboBox.addItem (TRANS ("System default"), 1);
+    languageComboBox.addItem (TRANS ("Chinese"), 2);
+    languageComboBox.addItem (TRANS ("English"), 3);
+
     browseAutoLoadPresetButton.setLookAndFeel (&getLookAndFeel());
     browseAutoLoadPresetButton.setColour (juce::TextButton::buttonColourId, MixerLookAndFeel::getSurfaceColour());
     browseAutoLoadPresetButton.setColour (juce::TextButton::textColourOffId, MixerLookAndFeel::getTextColour());
@@ -93,6 +99,7 @@ SettingsComponent::SettingsComponent (juce::AudioDeviceManager& manager)
     minimizeToTrayToggle.setToggleState    (settings.getMinimizeToTray(),    juce::dontSendNotification);
     autoLoadPresetToggle.setToggleState    (settings.getAutoLoadPreset(),    juce::dontSendNotification);
     setAutoLoadPresetFile (settings.getAutoLoadPresetFile());
+    languageComboBox.setSelectedId (settings.getLanguage() + 1, juce::dontSendNotification);
     updateAutoLoadPresetEnabledState();
     updatingUI = false;
 
@@ -125,8 +132,8 @@ void SettingsComponent::resized()
     auto bounds = getLocalBounds().reduced (16, 16);
     const auto labelWidth = juce::jmin (120, bounds.getWidth() / 3);
     const auto gap = 8;
-    const int numRows = 19;
-    const int numGaps = 18;
+    const int numRows = 20;
+    const int numGaps = 19;
     const auto rowHeight = juce::jmax (1, juce::jmin (32, (bounds.getHeight() - numGaps * gap)
                                                             / juce::jmax (1, numRows)));
 
@@ -178,6 +185,7 @@ void SettingsComponent::resized()
     layoutFullRow (startMinimizedToggle);
     layoutFullRow (minimizeToTrayToggle);
     layoutFullRow (autoLoadPresetToggle);
+    layoutRow (languageLabel, languageComboBox);
 
     // Preset to load 行：Label | [Browse...][路径]
     {
@@ -231,6 +239,17 @@ void SettingsComponent::comboBoxChanged (juce::ComboBox* comboBox)
         // ASIO 模式下 input 下拉框实际上用于选择单一 ASIO 设备
         // 选择后需要同时更新 input/output 设备名
         applyAsioDeviceSelection();
+    }
+    else if (comboBox == &languageComboBox)
+    {
+        // 语言切换：仅持久化，界面文案在下次启动时按新语言重建
+        AppSettings::getInstance().setLanguage (languageComboBox.getSelectedId() - 1);
+
+        juce::AlertWindow::showMessageBoxAsync (juce::AlertWindow::InfoIcon,
+                                                TRANS ("Language"),
+                                                TRANS ("Language changed. Restart Minixer to apply."),
+                                                TRANS ("OK"),
+                                                this);
     }
     else
     {

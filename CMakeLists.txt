@@ -126,6 +126,10 @@ set(_minixer_sources
     Source/Main.cpp
     Source/MainComponent.cpp
     Source/MainComponent.h
+    Source/Localisation/Localisation.cpp
+    Source/Localisation/Localisation.h
+    Source/Localisation/TranslationData_zh_CN.cpp
+    Source/Localisation/TranslationData_zh_CN.h
     Source/LookAndFeel/MixerLookAndFeel.cpp
     Source/LookAndFeel/MixerLookAndFeel.h
     Source/Plugin/PluginRegistry.cpp
@@ -199,6 +203,10 @@ set(_pluginhost_sources
     Source/PluginHost/PluginHostServer.h
     Source/PluginHost/PluginWrapper.cpp
     Source/PluginHost/PluginWrapper.h
+    Source/Localisation/Localisation.cpp
+    Source/Localisation/Localisation.h
+    Source/Localisation/TranslationData_zh_CN.cpp
+    Source/Localisation/TranslationData_zh_CN.h
     Source/LookAndFeel/MixerLookAndFeel.cpp
     Source/LookAndFeel/MixerLookAndFeel.h
     Source/PluginScanner/ScannerData.h

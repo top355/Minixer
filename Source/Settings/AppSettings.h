@@ -62,6 +62,11 @@ public:
     int getPluginSelectorSearchMode() const noexcept  { return pluginSelectorSearchMode; }
     void setPluginSelectorSearchMode (int mode);
 
+    /** 返回界面语言索引：0=跟随系统，1=简体中文，2=English。默认 0。
+        取值需与 Localisation::Language 枚举保持一致。 */
+    int getLanguage() const noexcept                  { return language; }
+    void setLanguage (int languageIndex);
+
     /** 返回插件选择对话框的列宽数组。
         顺序为 [Name, Manufacturer, Category]，默认 {280, 180, 140}。 */
     juce::Array<int> getPluginSelectorColumnWidths() const;
@@ -144,6 +149,7 @@ private:
     int inputMeterStandard = 0;
     int outputMeterStandard = 0;
     int pluginSelectorSearchMode = 0;
+    int language = 0;
 
     ShortcutSettings shortcutSettings;
 

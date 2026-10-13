@@ -34,6 +34,7 @@ AppSettings::AppSettings()
         inputMeterStandard = user->getIntValue    ("inputMeterStandard", 0);
         outputMeterStandard= user->getIntValue    ("outputMeterStandard",0);
         pluginSelectorSearchMode = user->getIntValue ("pluginSelectorSearchMode", 0);
+        language           = user->getIntValue    ("language", 0);
 
         // 兼容旧版只保存了 preset 名称的配置：将其视为默认 Presets 目录下的文件。
         if (autoLoadPresetPath.isNotEmpty() && ! juce::File::isAbsolutePath (autoLoadPresetPath))
@@ -187,6 +188,23 @@ void AppSettings::setPluginSelectorSearchMode (int mode)
 
     if (auto* user = props->getUserSettings())
         user->setValue ("pluginSelectorSearchMode", pluginSelectorSearchMode);
+
+    save();
+}
+
+//==============================================================================
+void AppSettings::setLanguage (int languageIndex)
+{
+    // 合法值与 Localisation::Language 对应：0=跟随系统，1=简体中文，2=English
+    languageIndex = juce::jlimit (0, 2, languageIndex);
+
+    if (language == languageIndex)
+        return;
+
+    language = languageIndex;
+
+    if (auto* user = props->getUserSettings())
+        user->setValue ("language", language);
 
     save();
 }

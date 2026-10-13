@@ -123,6 +123,10 @@ private:
     juce::TextButton browseAutoLoadPresetButton { TRANS("Browse") };
     juce::Label autoLoadPresetPathLabel;
 
+    // 界面语言（切换后重启生效）
+    juce::Label languageLabel;
+    juce::ComboBox languageComboBox;
+
     // 插件管理
     juce::Label pluginsSectionLabel;
     juce::TextButton managePluginsButton { TRANS("Manage Plugins") };

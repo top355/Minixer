@@ -92,7 +92,7 @@ void LevelMeterComponent::paint (juce::Graphics& g)
     {
         g.setColour (MixerLookAndFeel::getClipColour());
         g.setFont (juce::Font (juce::FontOptions (8.0f)).boldened());
-        g.drawText ("CLIP", meterBounds.reduced (2.0f), juce::Justification::centredTop, false);
+        g.drawText (TRANS ("CLIP"), meterBounds.reduced (2.0f), juce::Justification::centredTop, false);
     }
 
     // 底部显示当前计量标准，仅居中于两根电平条宽度内

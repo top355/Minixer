@@ -9,6 +9,7 @@
 #include <JuceHeader.h>
 #include <memory>
 #include "MainComponent.h"
+#include "Localisation/Localisation.h"
 #include "Settings/AppSettings.h"
 #include "LookAndFeel/MixerLookAndFeel.h"
 
@@ -289,6 +290,17 @@ bool MinixerApplication::moreThanOneInstanceAllowed()             { return false
 void MinixerApplication::initialise (const juce::String& commandLine)
 {
     juce::ignoreUnused (commandLine);
+
+    // 本地化：必须在任何窗口/组件创建之前加载映射表——
+    // 各组件在构造时即通过 TRANS() 一次性读取界面文案。
+    // 优先级：命令行 --lang > 设置面板“语言” > 系统显示语言。
+    const auto languageOverride = minixer::Localisation::parseCommandLineLanguage (commandLine);
+
+    if (languageOverride.has_value())
+        minixer::Localisation::apply (*languageOverride);
+    else
+        minixer::Localisation::applyFromSetting (minixer::AppSettings::getInstance().getLanguage());
+
     mainWindow.reset (new MainWindow (getApplicationName()));
 }
 

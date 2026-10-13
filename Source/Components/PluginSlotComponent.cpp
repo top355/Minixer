@@ -68,8 +68,8 @@ void PluginSlotComponent::updateDisplay()
     {
         // 加载中：显示目标插件名，屏蔽旁通，右侧按钮改为取消
         slotButton.setButtonText (busyPluginName.isNotEmpty()
-                                      ? prefix + TRANS ("Loading") + " " + busyPluginName + "..."
-                                      : prefix + TRANS ("Loading") + "...");
+                                      ? prefix + TRANS ("Loading") + " " + busyPluginName + TRANS ("...")
+                                      : prefix + TRANS ("Loading") + TRANS ("..."));
         bypassButton.setBypassState (bypassed);
         bypassButton.setEnabled (false);
         actionButton.setButtonText ("X");
@@ -80,8 +80,8 @@ void PluginSlotComponent::updateDisplay()
     {
         // 卸载中：等待 PluginHost 子进程退出，不可取消
         slotButton.setButtonText (busyPluginName.isNotEmpty()
-                                      ? prefix + TRANS ("Removing") + " " + busyPluginName + "..."
-                                      : prefix + TRANS ("Removing") + "...");
+                                      ? prefix + TRANS ("Removing") + " " + busyPluginName + TRANS ("...")
+                                      : prefix + TRANS ("Removing") + TRANS ("..."));
         bypassButton.setBypassState (false);
         bypassButton.setEnabled (false);
         actionButton.setButtonText ({});
