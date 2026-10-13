@@ -61,6 +61,8 @@ public:
 
     void positionComboBoxText (juce::ComboBox& box, juce::Label& label) override;
 
+    juce::Font getTextButtonFont (juce::TextButton& button, int buttonHeight) override;
+
     void drawPopupMenuItem (juce::Graphics& g, const juce::Rectangle<int>& area,
                             const bool isSeparator, const bool isActive,
                             const bool isHighlighted, const bool isTicked,

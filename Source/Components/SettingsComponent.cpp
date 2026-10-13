@@ -62,7 +62,7 @@ SettingsComponent::SettingsComponent (juce::AudioDeviceManager& manager)
     browseAutoLoadPresetButton.addListener (this);
     addAndMakeVisible (browseAutoLoadPresetButton);
 
-    autoLoadPresetPathLabel.setFont (juce::Font (juce::FontOptions (12.0f)));
+    autoLoadPresetPathLabel.setFont (juce::Font (juce::FontOptions (14.0f)));
     autoLoadPresetPathLabel.setColour (juce::Label::textColourId, MixerLookAndFeel::getTextColour());
     autoLoadPresetPathLabel.setJustificationType (juce::Justification::centredLeft);
     addAndMakeVisible (autoLoadPresetPathLabel);
@@ -130,15 +130,40 @@ void SettingsComponent::grabInitialFocus()
 void SettingsComponent::resized()
 {
     auto bounds = getLocalBounds().reduced (16, 16);
-    const auto labelWidth = juce::jmin (120, bounds.getWidth() / 3);
-    const auto gap = 8;
-    const int numRows = 20;
-    const int numGaps = 19;
-    const auto rowHeight = juce::jmax (1, juce::jmin (32, (bounds.getHeight() - numGaps * gap)
-                                                            / juce::jmax (1, numRows)));
+    const auto labelWidth = juce::jmin (132, bounds.getWidth() / 3);
+
+    // 行数、分区标题行数（Audio / Preferences / Plugins / Shortcuts / About）
+    // 必须与下方布局代码保持一致
+    constexpr auto numRows = 20;
+    constexpr auto numSectionRows = 5;
+    constexpr auto numGaps = numRows - 1;
+
+    // 行高需要容得下 15pt 正文（17pt 分区标题行再加高一截）。
+    // 主区域高度固定（窗口 640 − 预设栏 76 − 状态栏 24），因此这里把原先 8px 的
+    // 行间距压缩到 4px，换取更高的行高，并保证所有内容恰好铺满、不被裁切。
+    constexpr auto preferredGap = 4;
+    constexpr auto minRowHeight = 18;
+    constexpr auto maxRowHeight = 30;
+
+    auto gap = preferredGap;
+    auto rowHeight = (bounds.getHeight() - numGaps * gap) / numRows;
+
+    if (rowHeight < minRowHeight)
+    {
+        gap = 2;
+        rowHeight = (bounds.getHeight() - numGaps * gap) / numRows;
+    }
+
+    rowHeight = juce::jlimit (1, maxRowHeight, rowHeight);
+
+    // 余下的高度补给分区标题行，让标题更有呼吸感
+    const auto spare = bounds.getHeight() - (numRows * rowHeight + numGaps * gap);
+    const auto sectionHeight = rowHeight + juce::jlimit (0, 8, spare / numSectionRows);
 
     // 将表单项在主区域内垂直居中
-    const auto totalHeight = numRows * rowHeight + numGaps * gap;
+    const auto totalHeight = (numRows - numSectionRows) * rowHeight
+                           + numSectionRows * sectionHeight
+                           + numGaps * gap;
     bounds.removeFromTop (juce::jmax (0, (bounds.getHeight() - totalHeight) / 2));
 
     auto layoutRow = [&bounds, labelWidth, rowHeight, gap] (juce::Component& left, juce::Component& right)
@@ -156,7 +181,14 @@ void SettingsComponent::resized()
         bounds.removeFromTop (gap);
     };
 
-    layoutFullRow (audioSectionLabel);
+    // 分区标题行略高，与普通行拉开层次
+    auto layoutSectionRow = [&bounds, sectionHeight, gap] (juce::Component& comp)
+    {
+        comp.setBounds (bounds.removeFromTop (sectionHeight));
+        bounds.removeFromTop (gap);
+    };
+
+    layoutSectionRow (audioSectionLabel);
     layoutRow (driverLabel,        driverComboBox);
     layoutRow (inputDeviceLabel,   inputDeviceComboBox);
 
@@ -180,7 +212,7 @@ void SettingsComponent::resized()
     layoutRow (sampleRateLabel,    sampleRateComboBox);
     layoutRow (bufferSizeLabel,    bufferSizeComboBox);
 
-    layoutFullRow (preferencesSectionLabel);
+    layoutSectionRow (preferencesSectionLabel);
     layoutFullRow (launchOnStartupToggle);
     layoutFullRow (startMinimizedToggle);
     layoutFullRow (minimizeToTrayToggle);
@@ -202,14 +234,14 @@ void SettingsComponent::resized()
         bounds.removeFromTop (gap);
     }
 
-    layoutFullRow (pluginsSectionLabel);
+    layoutSectionRow (pluginsSectionLabel);
     layoutFullRow (managePluginsButton);
     layoutFullRow (pluginCountLabel);
 
-    layoutFullRow (shortcutsSectionLabel);
+    layoutSectionRow (shortcutsSectionLabel);
     layoutFullRow (configureShortcutsButton);
 
-    layoutFullRow (aboutSectionLabel);
+    layoutSectionRow (aboutSectionLabel);
     layoutFullRow (aboutButton);
 }
 
@@ -389,7 +421,7 @@ void SettingsComponent::setupComboBox (juce::ComboBox& comboBox)
 void SettingsComponent::setupLabel (juce::Label& label, const juce::String& text)
 {
     label.setText (text, juce::dontSendNotification);
-    label.setFont (juce::Font (juce::FontOptions (12.0f)));
+    label.setFont (juce::Font (juce::FontOptions (15.0f)));
     label.setColour (juce::Label::textColourId, MixerLookAndFeel::getTextColour());
     label.setJustificationType (juce::Justification::centredLeft);
     addAndMakeVisible (label);
@@ -399,7 +431,7 @@ void SettingsComponent::setupLabel (juce::Label& label, const juce::String& text
 void SettingsComponent::setupSectionLabel (juce::Label& label, const juce::String& text)
 {
     label.setText (text, juce::dontSendNotification);
-    label.setFont (juce::Font (juce::FontOptions (14.0f)).boldened());
+    label.setFont (juce::Font (juce::FontOptions (17.0f)).boldened());
     label.setColour (juce::Label::textColourId, MixerLookAndFeel::getAccentColour());
     label.setJustificationType (juce::Justification::centredLeft);
     addAndMakeVisible (label);

@@ -231,8 +231,17 @@ void MixerLookAndFeel::drawComboBox (juce::Graphics& g, int width, int height, b
 void MixerLookAndFeel::positionComboBoxText (juce::ComboBox& box, juce::Label& label)
 {
     label.setBounds (4, 1, box.getWidth() - 24, box.getHeight() - 2);
-    label.setFont (juce::Font (juce::FontOptions (13.0f)));
+    label.setFont (juce::Font (juce::FontOptions (15.0f)));
     label.setJustificationType (juce::Justification::centredLeft);
+}
+
+//==============================================================================
+juce::Font MixerLookAndFeel::getTextButtonFont (juce::TextButton&, int buttonHeight)
+{
+    // JUCE 默认按按钮高度的 0.6 倍计算字号，矮按钮上的文字会明显偏小（中文尤甚）。
+    // 这里抬高比例并设置 13pt 下限，使按钮文字与同一页面上的标签、开关保持一致。
+    const auto height = juce::jmin (15.0f, juce::jmax (13.0f, (float) buttonHeight * 0.75f));
+    return juce::Font (juce::FontOptions (height));
 }
 
 //==============================================================================
@@ -257,7 +266,7 @@ void MixerLookAndFeel::drawPopupMenuItem (juce::Graphics& g, const juce::Rectang
     }
 
     g.setColour (findColour (juce::PopupMenu::textColourId));
-    g.setFont (juce::Font (juce::FontOptions (13.0f)));
+    g.setFont (juce::Font (juce::FontOptions (15.0f)));
     g.drawText (text, area.reduced (10, 0), juce::Justification::centredLeft, true);
 }
 
